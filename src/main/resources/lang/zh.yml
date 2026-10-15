@@ -1,0 +1,113 @@
+addon: "Sided-IO"
+
+# 方向（SideMode）—— 循环顺序：双向 → 输入 → 输出 → 空
+mode:
+  both: "<gray>双向"
+  input: "<blue>输入"
+  output: "<gold>输出"
+  none: "<red>空"
+
+# 六个面（按**方位**叫）—— 用于 WAILA、动作栏提示、以及面标签里的后半截。
+# ⚠️ 原版没有 `block.minecraft.north` 这类键（那是想当然编的），所以自带一套。
+face:
+  up: "<gray>上面"
+  down: "<gray>下面"
+  north: "<gray>北面"
+  south: "<gray>南面"
+  east: "<gray>东面"
+  west: "<gray>西面"
+
+# 面**相对机器**的角色 —— 面板上的格子按这个排（前面永远在正中）。
+role:
+  front: "<white>前面"
+  back: "<white>背面"
+  left: "<white>左面"
+  right: "<white>右面"
+  top: "<white>上面"
+  bottom: "<white>下面"
+
+# 通道类型（ChannelType）。
+#
+# ⚠️ 按 `<命名空间>` 再分一层，因为翻译键是
+# `sidedio.channel_type.<命名空间>.<名字>.name`。
+#
+# ⚠️⚠️ 同一个 YAML 键不能既是字符串又是 section —— 下面 `gui` 段里
+# 一律用平铺的复合名（`button_frame`），不用点号。
+channel_type:
+  sidedio:
+    unknown:
+      name: "<gray>未知通道"
+      description: "<gray>这个通道的类型没有被识别（注册它的附属可能被移除了）"
+    item:
+      name: "<white>物品"
+      description: "<gray>箱子、槽位里的东西"
+    fluid:
+      name: "<aqua>流体"
+      description: "<gray>水、岩浆、各种液体"
+    energy:
+      name: "<red>能量"
+      description: "<gray>电、红石能量、FE"
+    gas:
+      name: "<green>气体"
+      description: "<gray>化工类的气体"
+
+# 机器级设置（和面无关的那部分）
+# ⚠️ 名字和说明用**平铺的 _desc 后缀**，不用 `.description` ——
+# 同一个键既当字符串又当 section 会让名字被 YAML 吞掉。
+setting:
+  redstone: "<red>红石控制"
+  redstone_desc: "<gray>决定红石信号怎么影响机器"
+  auto_input: "<blue>自动输入"
+  auto_input_desc: "<gray>机器自己从相邻容器拉东西进来，不靠管道"
+  auto_output: "<gold>自动输出"
+  auto_output_desc: "<gray>机器自己把产物推给相邻容器，不靠管道"
+
+# 红石四态。语义由**机器**实现，Sided-IO 只存这个值。
+redstone:
+  ignored: "<gray>忽略红石"
+  ignored_desc: "<gray>红石信号完全不影响机器"
+  low: "<blue>低电平"
+  low_desc: "<gray>收到信号时停止"
+  high: "<gold>高电平"
+  high_desc: "<gray>收到信号才运行"
+  pulse: "<light_purple>脉冲"
+  pulse_desc: "<gray>收到信号的那一瞬间跑一小段"
+
+waila:
+  side: "<gray>%face%：%mode%"
+  channel: "<gray>  %type%<gray>：%mode%"
+
+# 能量端口的**只读**现状（面板上不可点）。
+# 能量走 Rebar 的电网络，没有"方向"这个概念，Rebar 也没给拦接线的钩子，
+# 所以这里只如实展示机器实际开在哪些面、接了几根线。
+energy:
+  no_port: "<dark_gray>无端口"
+  idle: "<gold>有端口，未接线"
+  wired: "<green>已接 %wires% 根线"
+
+gui:
+  title: "<white>机器配置 <gray>· %type%"
+  button: "<white>%face% <gray>（%mode%<gray>）"
+  button_frame: "<gray>通道：%type%"
+  background: "<gray>当前通道：%type%"
+  machine: "<gray>这台机器"
+  face_label: "%role%<dark_gray>·<gray>%compass%"
+  type_lore: "<gray>点一下切换到这条通道"
+  display_only_lore: "<gray>这条通道由机器决定，不可配置"
+  readonly_hint: "<dark_gray>只读 · 由机器决定"
+  type_summary: "<gray>  %face% <dark_gray>·<gray> %mode%"
+  setting_state: "<gray>状态：%state%"
+  setting_hint: "<dark_gray>左键切换"
+  state_on: "<green>开"
+  state_off: "<dark_gray>关"
+  # 「返回上一级界面」—— 面板是顶掉机器界面打开的，这是回去的唯一入口。
+  back: "<white>返回"
+  back_lore: "<gray>回到机器的界面"
+  hint:
+    left: "<dark_gray>左键 <gray>下一个"
+    right: "<dark_gray>右键 <gray>上一个"
+
+message:
+  face-mode: "<gray>%face% → %mode%"
+  face-mode-typed: "<gray>%face% <dark_gray>·<gray> %type% <gray>→ %mode%"
+  redstone: "<gray>红石：%mode%"

@@ -1,0 +1,117 @@
+addon: "Sided-IO"
+
+# Side modes. Cycle order: both -> input -> output -> none
+mode:
+  both: "<gray>Both"
+  input: "<blue>Input"
+  output: "<gold>Output"
+  none: "<red>Off"
+
+# The six faces, named by compass direction. Used by WAILA, action-bar
+# messages, and the tail half of a face label.
+# WARNING: vanilla has no `block.minecraft.north` keys (that was made up),
+# so Sided-IO ships its own.
+face:
+  up: "<gray>Top"
+  down: "<gray>Bottom"
+  north: "<gray>North"
+  south: "<gray>South"
+  east: "<gray>East"
+  west: "<gray>West"
+
+# A face's role *relative to the machine*. The panel grid is laid out by role
+# (the front is always dead centre).
+role:
+  front: "<white>Front"
+  back: "<white>Back"
+  left: "<white>Left"
+  right: "<white>Right"
+  top: "<white>Top"
+  bottom: "<white>Bottom"
+
+# Channel types. Nested by <namespace> because the key is
+# `sidedio.channel_type.<namespace>.<name>.name`.
+#
+# WARNING: the same YAML key must never be BOTH a scalar and a section, so
+# dotted names are avoided below and flattened (`button_frame`) instead.
+channel_type:
+  sidedio:
+    unknown:
+      name: "<gray>Unknown channel"
+      description: "<gray>This channel's type is not registered (the addon that added it may be gone)"
+    item:
+      name: "<white>Items"
+      description: "<gray>Things in slots and chests"
+    fluid:
+      name: "<aqua>Fluids"
+      description: "<gray>Water, lava, and other liquids"
+    energy:
+      name: "<red>Energy"
+      description: "<gray>Redstone flux, FE, and the like"
+    gas:
+      name: "<green>Gases"
+      description: "<gray>Chemical process gases"
+
+# Machine-level settings (the part that is not per-face)
+# NOTE: name and description use a flat `_desc` suffix instead of
+# `.description` — a key that is both a scalar and a section gets eaten by YAML.
+setting:
+  redstone: "<red>Redstone Control"
+  redstone_desc: "<gray>How a redstone signal affects the machine"
+  auto_input: "<blue>Auto Input"
+  auto_input_desc: "<gray>The machine pulls items from adjacent containers itself"
+  auto_output: "<gold>Auto Output"
+  auto_output_desc: "<gray>The machine pushes its output to adjacent containers itself"
+
+# The four redstone modes. The *meaning* is implemented by the machine;
+# Sided-IO only stores the value.
+redstone:
+  ignored: "<gray>Ignored"
+  ignored_desc: "<gray>Redstone has no effect on the machine"
+  low: "<blue>Low"
+  low_desc: "<gray>Stops while it receives a signal"
+  high: "<gold>High"
+  high_desc: "<gray>Runs only while it receives a signal"
+  pulse: "<light_purple>Pulse"
+  pulse_desc: "<gray>Runs briefly the moment it receives a signal"
+
+waila:
+  side: "<gray>%face%: %mode%"
+  channel: "<gray>  %type%<gray>: %mode%"
+
+# Read-only status of energy ports (not clickable in the panel).
+# Energy runs on Rebar's electric network — there is no notion of "direction",
+# and Rebar offers no hook to block a wire, so this just reports which faces the
+# machine actually has ports on and how many wires are attached.
+energy:
+  no_port: "<dark_gray>No port"
+  idle: "<gold>Port, no wire"
+  wired: "<green>%wires% wire(s)"
+
+gui:
+  title: "<white>Machine Configuration <gray>· %type%"
+  button: "<white>%face% <gray>(%mode%<gray>)"
+  button_frame: "<gray>Channel: %type%"
+  background: "<gray>Editing: %type%"
+  machine: "<gray>This machine"
+  face_label: "%role%<dark_gray>·<gray>%compass%"
+  type_lore: "<gray>Click to edit this channel"
+  display_only_lore: "<gray>This channel is decided by the machine — not configurable"
+  readonly_hint: "<dark_gray>Read-only · decided by the machine"
+  type_summary: "<gray>  %face% <dark_gray>·<gray> %mode%"
+  setting_state: "<gray>State: %state%"
+  setting_hint: "<dark_gray>Click to toggle"
+  state_on: "<green>On"
+  state_off: "<dark_gray>Off"
+  # "Back to the previous screen" — the panel opens on top of the machine's
+  # window, so this is the only way back.
+  back: "<white>Back"
+  back_lore: "<gray>Return to the machine's screen"
+  hint:
+    left: "<dark_gray>Left click <gray>next"
+    right: "<dark_gray>Right click <gray>previous"
+
+message:
+  face-mode: "<gray>%face% → %mode%"
+  face-mode-typed: "<gray>%face% <dark_gray>·<gray> %type% <gray>→ %mode%"
+  redstone: "<gray>Redstone: %mode%"

@@ -148,6 +148,62 @@ class SideModeTest {
         }
     }
 
+    /**
+     * 🔴 **回归**：自定义档**不能**跑进"没声明它"的机器的循环里。
+     *
+     * 自定义档是**全局注册**的（`SideModes.register`），但"哪台机器用得上"
+     * 只有机器知道。不按 `allowed` 过滤的话，`ironfurnaces:fuel_input_eject`
+     * 会出现在**每一台机器**的循环里 —— 包括**原版箱子**的扳手循环
+     * （`VanillaSideStore` 走的是同一套 `SideMode.next()`）。
+     */
+    @Test
+    fun `a custom mode never leaks into a machine that did not declare it`() {
+        SideModes.resetToBuiltin()
+        try {
+            val fuel = SideModes.register("test:fuel", SideMode.Flow.IN)
+
+            // ① 没声明它的机器：只在内置四档里转，永远碰不到 fuel
+            var mode = SideMode.BOTH
+            repeat(8) {
+                mode = mode.next(SideMode.BUILTIN)
+                assertTrue(mode in SideMode.BUILTIN, "不该切到内置档以外的 $mode")
+            }
+
+            // ② 声明了的机器：能切到它
+            val allowed = SideMode.BUILTIN.toSet() + fuel
+            val reached = generateSequence(SideMode.BOTH) { it.next(allowed) }.take(8).toList()
+            assertTrue(fuel in reached, "声明过的机器该能切到 $fuel，实际: $reached")
+        } finally {
+            SideModes.resetToBuiltin()
+        }
+    }
+
+    /**
+     * 🔴 当前档**不在**允许集合里时，切一下要**落到允许集合内**。
+     *
+     * 场景：机器装了工厂升级 → 燃料槽消失 → 「燃料输入/弹出」不再支持，
+     * 但玩家那个格子上还存着它。这时点一下不该原地卡住。
+     */
+    @Test
+    fun `cycling out of an unsupported mode lands inside the allowed set`() {
+        SideModes.resetToBuiltin()
+        try {
+            val fuel = SideModes.register("test:fuel2", SideMode.Flow.IN)
+
+            assertTrue(fuel.next(SideMode.BUILTIN) in SideMode.BUILTIN)
+            assertTrue(fuel.previous(SideMode.BUILTIN) in SideMode.BUILTIN)
+        } finally {
+            SideModes.resetToBuiltin()
+        }
+    }
+
+    /** 允许集合为空时原地不动（不崩、不返回 null）。 */
+    @Test
+    fun `cycling with an empty allowed set stays put`() {
+        assertEquals(SideMode.INPUT, SideMode.INPUT.next(emptyList()))
+        assertEquals(SideMode.INPUT, SideMode.INPUT.previous(emptyList()))
+    }
+
     /** 撞 id 要被拒绝 —— 静默覆盖会让两个附属上同一个 id 后行为莫名其妙地变。 */
     @Test
     fun `registering the same id twice is rejected`() {

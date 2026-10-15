@@ -100,16 +100,25 @@ object VanillaSideStore {
         writeToPdc(block, modes)
     }
 
-    /** 循环切换并返回新模式。 */
+    /**
+     * 循环切换并返回新模式。
+     *
+     * ⚠️ **只在内置四档里转**（[SideMode.BUILTIN]）。
+     *
+     * 原版容器不归任何附属管，所以别的附属注册的自定义档
+     * （例如铁熔炉的「燃料输入/弹出」）在这里**没有意义** ——
+     * 让玩家对着一个箱子按扳手切到"燃料输入/弹出"是说不通的。
+     * 自定义档要机器自己用 `SideConfigBuilder.extraFaceModes` 声明才生效。
+     */
     fun cycleMode(block: Block, face: BlockFace): SideMode {
-        val next = modeOf(block, face).next()
+        val next = modeOf(block, face).next(SideMode.BUILTIN)
         setMode(block, face, next)
         return next
     }
 
-    /** 反向循环切换。 */
+    /** 反向循环切换（同样只在内置四档里转，见 [cycleMode]）。 */
     fun cycleModeBackwards(block: Block, face: BlockFace): SideMode {
-        val previous = modeOf(block, face).previous()
+        val previous = modeOf(block, face).previous(SideMode.BUILTIN)
         setMode(block, face, previous)
         return previous
     }

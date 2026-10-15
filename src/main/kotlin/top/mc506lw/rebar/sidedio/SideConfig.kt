@@ -103,6 +103,21 @@ class SideConfig internal constructor(
      * 显示的是"实际端口在哪"（[EnergyPorts]）而不是一个改了不生效的开关。
      */
     internal val displayKeys: Set<ChannelKey> = emptySet(),
+    /**
+     * 这台机器**支持哪些面状态**（内置四档 + 它声明的自定义档）。
+     *
+     * ## 为什么不能"默认全支持"
+     *
+     * 自定义档是**全局注册**的（`SideModes.register`），但"哪台机器用得上"
+     * 只有机器自己知道。如果默认全支持，那么 `ironfurnaces:fuel_input_eject`
+     * 会出现在**每一台机器**的循环里 —— 包括**原版箱子**的扳手循环
+     * （`VanillaSideStore` 走的是同一套 `SideMode.next()`）。
+     * 玩家对着箱子按扳手，切到一个"燃料输入/弹出"是说不通的。
+     *
+     * 所以默认只有 [SideMode.BUILTIN]；自定义档要机器用
+     * [SideConfigBuilder.extraFaceModes] 显式声明。
+     */
+    internal val supportedModes: Set<SideMode> = SideMode.BUILTIN.toSet(),
 ) {
 
     /**
@@ -259,14 +274,15 @@ class SideConfig internal constructor(
     /**
      * 把某个 `(面, 类型)` 循环切到下一个方向。
      *
-     * 顺序是 [SideMode.CYCLE_ORDER]：双向 → 输入 → 输出 → 空 → 双向。
+     * 顺序是 [SideModes.cycleOrder]，但**只在这台机器支持的档位里转**
+     * （[supportedModes]）：双向 → 输入 → 输出 → 空 →（声明的自定义档）→ 双向。
      * **只在这个面真的有这个类型时才切** —— 面板不该画出不存在的格子，
      * 万一手滑传了个不存在的组合，这里静默忽略而不是造一格幽灵配置出来。
      */
     fun cycleMode(face: BlockFace, type: ChannelType): SideMode {
         val key = ChannelKey.of(type)
         if (!hasChannel(face, key)) return SideMode.NONE
-        val next = mode(face, key).next()
+        val next = mode(face, key).next(supportedModes)
         setMode(face, key, next)
         return next
     }
@@ -275,10 +291,18 @@ class SideConfig internal constructor(
     fun cycleModeBackwards(face: BlockFace, type: ChannelType): SideMode {
         val key = ChannelKey.of(type)
         if (!hasChannel(face, key)) return SideMode.NONE
-        val previous = mode(face, key).previous()
+        val previous = mode(face, key).previous(supportedModes)
         setMode(face, key, previous)
         return previous
     }
+
+    /**
+     * 这台机器支不支持这一档。
+     *
+     * 用来在**机器能力变了**（例如拆掉工厂升级后没有燃料槽了）时把
+     * 玩家配置里已经失效的档位收回去 —— 见 `SidedIo.reattach`。
+     */
+    fun isModeSupported(mode: SideMode): Boolean = mode in supportedModes
 
     /** 这个 `(面, 类型)` 是不是一个真实存在的格子。 */
     fun hasChannel(face: BlockFace, type: ChannelType): Boolean =
@@ -807,6 +831,40 @@ class SideConfigBuilder internal constructor(
     private val definitions = ArrayList<SideConfig.ChannelDefinition>()
 
     /**
+     * 这台机器**额外**支持的面状态（[extraFaceModes] 声明）。
+     *
+     * 内置四档永远支持，这里只放附属注册的自定义档。
+     */
+    private val extraModes = LinkedHashSet<SideMode>()
+
+    /**
+     * 声明这台机器**额外**支持哪些面状态。
+     *
+     * ## 内置四档永远支持，这里只声明**自定义档**
+     *
+     * 自定义档是全局注册的（`SideModes.register`），但"哪台机器用得上"只有机器知道。
+     * 不声明的话，这台机器的扳手 / 面板循环里**只有内置四档** ——
+     * 这正是想要的：`ironfurnaces:fuel_input_eject` 不该出现在
+     * 别的附属的机器上，更不该出现在**原版箱子**的扳手循环里。
+     *
+     * ```kotlin
+     * // 熔炉：只有**有燃料槽**的时候才提供「燃料输入/弹出」这一档
+     * if (fuelSlotEnabled) builder.extraFaceModes(FUEL_INPUT_EJECT)
+     * ```
+     *
+     * ⚠️ 机器能力变了（装了工厂升级 → 燃料槽消失）时，不再声明的档会**从循环里消失**；
+     * 玩家之前存在那个面上的档位由 `SidedIo.reattach` 收回（退回出厂默认）。
+     */
+    fun extraFaceModes(vararg modes: SideMode): SideConfigBuilder = apply {
+        extraModes += modes
+    }
+
+    /** 同 [extraFaceModes]，集合版。 */
+    fun extraFaceModes(modes: Collection<SideMode>): SideConfigBuilder = apply {
+        extraModes += modes
+    }
+
+    /**
      * 注册一条通道。
      *
      * @param type    流的是什么（[ChannelTypes.ITEM] / [ChannelTypes.ENERGY] / …）。
@@ -1035,6 +1093,8 @@ class SideConfigBuilder internal constructor(
             settings = MachineSettings(supportedSettings.toSet()),
             facing = facingOverride ?: readFacing(rebar),
             displayKeys = displayKeys,
+            // 内置四档永远支持；自定义档要机器显式声明（见 extraFaceModes）
+            supportedModes = SideMode.BUILTIN.toSet() + extraModes,
         )
         for (face in hiddenFaces) config.hideFaceInternal(face)
 

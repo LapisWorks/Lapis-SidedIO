@@ -154,7 +154,13 @@ object SidedIo {
                 // 按面搬会把能量的配置当成物品的默认值糊上去。
                 for (face in SIDED_FACES) {
                     for (type in prev.typesOn(face)) {
-                        config.setMode(face, type, prev.mode(face, type))
+                        val mode = prev.mode(face, type)
+                        // ⚠️ 机器能力可能**变了**：装了工厂升级之后燃料槽消失，
+                        // 「燃料输入/弹出」那一档就不再支持（见 `extraFaceModes`）。
+                        // 把已经不受支持的档搬过来，玩家会看到一个
+                        // "切不到、也说不清"的格子 —— 直接跳过，那格退回出厂默认。
+                        if (!config.isModeSupported(mode)) continue
+                        config.setMode(face, type, mode)
                     }
                 }
                 // 方向搬回来了，组得按新方向再算一遍

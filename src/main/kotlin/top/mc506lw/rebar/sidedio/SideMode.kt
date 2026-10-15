@@ -198,11 +198,16 @@ class SideMode private constructor(
         groupName: String
     ): Boolean = flowFor(slotType, groupName) != Flow.NONE
 
-    /** 玩家左键点一下切到的下一个方向（按 [SideModes.cycleOrder]）。 */
-    fun next(): SideMode = SideModes.next(this)
+    /**
+     * 玩家左键点一下切到的下一个方向。
+     *
+     * @param allowed 这台机器支持的档位；`null` = 全部（内置四档 + 所有注册的自定义档）。
+     *                见 [SideConfig.supportedModes]。
+     */
+    fun next(allowed: Collection<SideMode>? = null): SideMode = SideModes.next(this, allowed)
 
     /** 上一个方向（反着转，比如右键 / Shift 右键）。 */
-    fun previous(): SideMode = SideModes.previous(this)
+    fun previous(allowed: Collection<SideMode>? = null): SideMode = SideModes.previous(this, allowed)
 
     override fun equals(other: Any?): Boolean = other is SideMode && other.id == id
     override fun hashCode(): Int = id.hashCode()
@@ -356,22 +361,36 @@ object SideModes {
      *
      * ⚠️ 每次调用**现算**，因为附属可能在运行期才注册（`onEnable` 时序）。
      * 缓存下来会让"注册得晚一点"变成"面板上看不到"。
+     *
+     * ## ⚠️ 这是**全局**顺序，不是"这台机器能用的档"
+     *
+     * 一台机器真正能切的档位是 `SideMode.BUILTIN + 它声明的自定义档`
+     * （见 [SideConfig.supportedModes]）。直接用这个全局表当循环顺序
+     * 会让**每台机器**（包括原版箱子的扳手循环）都切到别的附属的档上 ——
+     * 所以 [SideMode.next] / [SideMode.previous] 收一个 `allowed` 参数。
      */
     val cycleOrder: List<SideMode>
         get() = all().filter { it.inCycle }
 
-    internal fun next(current: SideMode): SideMode {
-        val order = cycleOrder
-        val index = order.indexOf(current)
-        if (index < 0) return order.firstOrNull() ?: current
-        return order[(index + 1) % order.size]
-    }
+    /**
+     * 循环里的下一个。
+     *
+     * @param allowed 允许的档位；`null` = 用整个 [cycleOrder]。
+     *                当前档不在 [allowed] 里时**落到第一个**（而不是原地卡住）——
+     *                例如机器装了升级之后"燃料档"不再支持，玩家点一下就该切走。
+     */
+    internal fun next(current: SideMode, allowed: Collection<SideMode>? = null): SideMode =
+        step(current, allowed, +1)
 
-    internal fun previous(current: SideMode): SideMode {
-        val order = cycleOrder
+    internal fun previous(current: SideMode, allowed: Collection<SideMode>? = null): SideMode =
+        step(current, allowed, -1)
+
+    private fun step(current: SideMode, allowed: Collection<SideMode>?, delta: Int): SideMode {
+        val order = if (allowed == null) cycleOrder else cycleOrder.filter { it in allowed }
+        if (order.isEmpty()) return current
         val index = order.indexOf(current)
-        if (index < 0) return order.lastOrNull() ?: current
-        return order[(index - 1 + order.size) % order.size]
+        if (index < 0) return if (delta > 0) order.first() else order.last()
+        return order[(index + delta + order.size) % order.size]
     }
 
     /**

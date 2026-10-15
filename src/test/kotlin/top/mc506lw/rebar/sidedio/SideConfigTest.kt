@@ -667,6 +667,31 @@ class SideConfigTest {
         assertEquals(input + fuel, config.insertSlotsFor(BlockFace.DOWN, ChannelTypes.ITEM))
     }
 
+    /**
+     * 🔴 **回归**：没声明自定义档的机器，循环里**只有内置四档**。
+     *
+     * 这条钉住的是"自定义档不会泄漏到别的机器上" —— 包括原版容器的扳手循环。
+     */
+    @Test
+    fun `a config supports only the builtin modes unless it declares more`() {
+        SideModes.resetToBuiltin()
+        try {
+            val fuel = SideModes.register("test:fuel", SideMode.Flow.IN)
+            val config = config()
+
+            assertTrue(config.isModeSupported(SideMode.BOTH))
+            assertTrue(config.isModeSupported(SideMode.NONE))
+            assertFalse(config.isModeSupported(fuel), "没声明的自定义档不该被支持")
+
+            // 循环 10 次也落不到它上面
+            val seen = LinkedHashSet<SideMode>()
+            repeat(10) { seen += config.cycleMode(BlockFace.NORTH, ChannelTypes.ITEM) }
+            assertTrue(fuel !in seen, "循环里不该出现没声明的档，实际: $seen")
+        } finally {
+            SideModes.resetToBuiltin()
+        }
+    }
+
     // ------------------------------------------------------------ 测试替身
 
     /**

@@ -121,6 +121,27 @@ SideModes.register(
 | **重载** | 插件重载会再跑一次 `onEnable`，而注册表是进程级单例 → 注册前先 `SideModes.find(id)` 查一下 |
 | **老存档** | `find` **忽略大小写**（老存档存的是 enum 时代的 `"INPUT"` 大写） |
 
+### ⚠️ 注册了还不够 —— 机器要**声明**自己用得上它
+
+自定义档是**全局注册**的，但"哪台机器用得上"只有机器知道。所以机器要显式声明：
+
+```kotlin
+override fun postInitialise() {
+    SidedIo.attach(this)
+        .channel(ChannelTypes.ITEM, fuelInv, filter = { it.type.isFuel }, name = "fuel")
+        // 只有**有燃料槽**的时候才提供这一档
+        .extraFaceModes(FUEL_INPUT_EJECT)
+        .apply()
+}
+```
+
+不声明的机器 —— **包括原版容器**的扳手循环 —— **只有内置四档**。
+否则玩家对着一个箱子按扳手，会切到别的附属的"燃料输入/弹出"上去。
+
+机器能力变了（装了工厂升级 → 燃料槽消失）时，不再声明的档会**从循环里消失**；
+玩家之前存在那个面上的档位由 `SidedIo.reattach` 收回（退回出厂默认），
+不会留下一个"切不到、也说不清"的格子。
+
 ## 玩家怎么用
 
 | 操作 | 效果 |

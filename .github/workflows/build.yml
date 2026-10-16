@@ -12,21 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      # 发 GitHub Packages 用
-      packages: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      # gradle.properties 里可能写死了本机的 org.gradle.java.home（如 D:\Java\zulu25），
-      # 在 CI 上不存在，先移除，由 setup-java 提供的 JAVA_HOME 接管。
-      - name: Remove local-only org.gradle.java.home
-        shell: pwsh
-        run: |
-          (Get-Content gradle.properties) |
-            Where-Object { $_ -notmatch '^org\.gradle\.java\.home' } |
-            Set-Content gradle.properties
 
       - name: Set up JDK 25 (Zulu)
         uses: actions/setup-java@v4
@@ -49,34 +38,6 @@ jobs:
           name: Lapis-SidedIO
           path: build/libs/*.jar
           if-no-files-found: error
-
-      # 推 v* 标签时同时发到 GitHub Packages（Maven）
-      # 下游仓库可以用 maven("https://maven.pkg.github.com/LapisWorks/Lapis-SidedIO") 拿到
-      # ⚠️ **暂不阻塞发布**：GitHub Packages 目前对我们的 jar 返回 422（见下方注释），
-      # 还在排查。让它 continue-on-error，免得每次发版 CI 都是红的、Release 也发不出来。
-      # 修好之后把这个 continue-on-error 去掉。
-      #
-      # 已知信息：POM 能推上去，**jar 的 PUT 被拒**（422 Unprocessable Entity），
-      # 换版本号（0.1.0 → 0.1.1）同样复现 → 不是"版本已存在"。
-      - name: Publish to GitHub Packages
-        continue-on-error: true
-        if: startsWith(github.ref, 'refs/tags/v')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -o pipefail
-          # ⚠️ 把输出 tee 到文件：`gh run view --log` 这个接口经常 502，
-          # 拿不到日志时还能靠下面那个 artifact 把报错捞出来。
-          ./gradlew publishMavenPublicationToGitHubPackagesRepository --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/publish.log"
-
-      # 发布失败时把日志传成 artifact（排查用）
-      - name: Upload publish log
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: publish-log
-          path: ${{ runner.temp }}/publish.log
-          if-no-files-found: warn
 
       # 推 v* 标签时自动发 Release
       - name: Publish GitHub Release

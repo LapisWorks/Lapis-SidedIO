@@ -150,30 +150,4 @@ publishing {
             artifact(tasks.named("sourcesJar"))
         }
     }
-
-    // GitHub Packages —— 给 **CI 和其它仓库** 用（本机开发仍然走 mavenLocal）。
-    //
-    // 为什么不是 Maven Central：Central 要 Sonatype 账号 + 命名空间校验 + GPG 签名，
-    // 这些凭据只有人有；GitHub Packages 用 Actions 自带的 `GITHUB_TOKEN` 就够，
-    // 不引入任何新的密钥。
-    //
-    // ⚠️ **无条件注册**这个仓库 —— 之前按"有没有凭据"条件注册，一旦判断不成立
-    // `publishMavenPublicationToGitHubPackagesRepository` 这个任务就不存在，
-    // CI 报的是"任务找不到"，很难看出是这里的问题。
-    //
-    // 无条件注册是安全的：这个仓库只在 `publishing.repositories` 里（**不在**用于
-    // 解析依赖的 `repositories` 里），所以 `./gradlew build` 根本不会碰它，
-    // 本机没有凭据也不影响编译。
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/LapisWorks/Lapis-SidedIO")
-            credentials {
-                // CI 里由 Actions 自动提供 GITHUB_ACTOR + 我们显式传的 GITHUB_TOKEN；
-                // 本机想发的话在 ~/.gradle/gradle.properties 里配 gpr.user / gpr.key。
-                username = System.getenv("GITHUB_ACTOR") ?: (findProperty("gpr.user") as String?)
-                password = System.getenv("GITHUB_TOKEN") ?: (findProperty("gpr.key") as String?)
-            }
-        }
-    }
 }

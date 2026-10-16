@@ -136,7 +136,7 @@ tasks.register<Jar>("sourcesJar") {
     from(sourceSets.main.get().allSource)
 }
 
-// 发布到本地 Maven（~/.m2），供同机的其它附属（Iron-Furnaces 等）compileOnly 依赖。
+// 发布到本地 Maven（~/.m2）**和** GitHub Packages，供其它附属（Iron-Furnaces 等）compileOnly 依赖。
 // 本机 Gradle 构建走 --offline，装到 mavenLocal 正好能被离线解析到。
 //   ./gradlew publishToMavenLocal
 publishing {
@@ -148,6 +148,29 @@ publishing {
             }
             // 源码一起发布：下游 IDE 里能直接跳进来读 Sided-IO 的代码
             artifact(tasks.named("sourcesJar"))
+        }
+    }
+
+    // GitHub Packages —— 给 **CI 和其它仓库** 用（本机开发仍然走 mavenLocal）。
+    //
+    // 为什么不是 Maven Central：Central 要 Sonatype 账号 + 命名空间校验 + GPG 签名，
+    // 这些凭据只有人有；GitHub Packages 用 Actions 自带的 `GITHUB_TOKEN` 就够，
+    // 不引入任何新的密钥。
+    //
+    // ⚠️ 凭据拿不到时**整个仓库都不注册** —— 不然本机 `./gradlew build` 会因为
+    // 一个空凭据的仓库配置直接报错（构建根本走不到编译）。
+    repositories {
+        val gprUser = System.getenv("GITHUB_ACTOR") ?: (findProperty("gpr.user") as String?)
+        val gprKey = System.getenv("GITHUB_TOKEN") ?: (findProperty("gpr.key") as String?)
+        if (gprUser != null && gprKey != null) {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/LapisWorks/Lapis-SidedIO")
+                credentials {
+                    username = gprUser
+                    password = gprKey
+                }
+            }
         }
     }
 }

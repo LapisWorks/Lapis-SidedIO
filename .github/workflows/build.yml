@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # 发 GitHub Packages 用
+      packages: write
 
     steps:
       - name: Checkout
@@ -47,6 +49,14 @@ jobs:
           name: Lapis-SidedIO
           path: build/libs/*.jar
           if-no-files-found: error
+
+      # 推 v* 标签时同时发到 GitHub Packages（Maven）
+      # 下游仓库可以用 maven("https://maven.pkg.github.com/LapisWorks/Lapis-SidedIO") 拿到
+      - name: Publish to GitHub Packages
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew publishMavenPublicationToGitHubPackagesRepository --no-daemon
 
       # 推 v* 标签时自动发 Release
       - name: Publish GitHub Release

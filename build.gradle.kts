@@ -157,19 +157,22 @@ publishing {
     // 这些凭据只有人有；GitHub Packages 用 Actions 自带的 `GITHUB_TOKEN` 就够，
     // 不引入任何新的密钥。
     //
-    // ⚠️ 凭据拿不到时**整个仓库都不注册** —— 不然本机 `./gradlew build` 会因为
-    // 一个空凭据的仓库配置直接报错（构建根本走不到编译）。
+    // ⚠️ **无条件注册**这个仓库 —— 之前按"有没有凭据"条件注册，一旦判断不成立
+    // `publishMavenPublicationToGitHubPackagesRepository` 这个任务就不存在，
+    // CI 报的是"任务找不到"，很难看出是这里的问题。
+    //
+    // 无条件注册是安全的：这个仓库只在 `publishing.repositories` 里（**不在**用于
+    // 解析依赖的 `repositories` 里），所以 `./gradlew build` 根本不会碰它，
+    // 本机没有凭据也不影响编译。
     repositories {
-        val gprUser = System.getenv("GITHUB_ACTOR") ?: (findProperty("gpr.user") as String?)
-        val gprKey = System.getenv("GITHUB_TOKEN") ?: (findProperty("gpr.key") as String?)
-        if (gprUser != null && gprKey != null) {
-            maven {
-                name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/LapisWorks/Lapis-SidedIO")
-                credentials {
-                    username = gprUser
-                    password = gprKey
-                }
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/LapisWorks/Lapis-SidedIO")
+            credentials {
+                // CI 里由 Actions 自动提供 GITHUB_ACTOR + 我们显式传的 GITHUB_TOKEN；
+                // 本机想发的话在 ~/.gradle/gradle.properties 里配 gpr.user / gpr.key。
+                username = System.getenv("GITHUB_ACTOR") ?: (findProperty("gpr.user") as String?)
+                password = System.getenv("GITHUB_TOKEN") ?: (findProperty("gpr.key") as String?)
             }
         }
     }

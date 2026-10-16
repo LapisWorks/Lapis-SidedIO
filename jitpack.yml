@@ -1,0 +1,19 @@
+# JitPack 构建配置 —— https://jitpack.io/docs/BUILDING/
+#
+# 用它的理由：Sided-IO 是自定义 groupId 的库，而 Maven Central 要 Sonatype 账号 +
+# 命名空间校验 + GPG 签名。JitPack 直接从 GitHub 的 tag 现编，不需要任何发布凭据。
+# 下游（Iron-Furnaces）只要加 `maven("https://jitpack.io")` 就能依赖。
+jdk:
+  - openjdk25
+
+before_install:
+  # ⚠️ 仓库里这份 gradle.properties 是在 Windows 上提交的，带着
+  # `org.gradle.java.home=C:/...`；JitPack 的 Linux 机器上这个路径不存在，
+  # Gradle 直接起不来。（我们在 GitHub Actions 上踩过一模一样的坑。）
+  - sed -i '/^org\.gradle\.java\.home/d' gradle.properties
+
+# 默认跑 `./gradlew build` 不会把产物发布出去，JitPack 就找不到 artifact。
+# `publishToMavenLocal` 会走我们 build.gradle.kts 里那份 maven-publish 配置
+# （shadowJar + sourcesJar），JitPack 再把它搬到自己的仓库里。
+install:
+  - ./gradlew publishToMavenLocal --no-daemon

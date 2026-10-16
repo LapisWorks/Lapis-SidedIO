@@ -52,7 +52,14 @@ jobs:
 
       # 推 v* 标签时同时发到 GitHub Packages（Maven）
       # 下游仓库可以用 maven("https://maven.pkg.github.com/LapisWorks/Lapis-SidedIO") 拿到
+      # ⚠️ **暂不阻塞发布**：GitHub Packages 目前对我们的 jar 返回 422（见下方注释），
+      # 还在排查。让它 continue-on-error，免得每次发版 CI 都是红的、Release 也发不出来。
+      # 修好之后把这个 continue-on-error 去掉。
+      #
+      # 已知信息：POM 能推上去，**jar 的 PUT 被拒**（422 Unprocessable Entity），
+      # 换版本号（0.1.0 → 0.1.1）同样复现 → 不是"版本已存在"。
       - name: Publish to GitHub Packages
+        continue-on-error: true
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
